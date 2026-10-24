@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from ultralytics import YOLO
 
-RENDER_URL = "https://agri-sentinel-47x8.onrender.com"
+RENDER_URL = "https://agri-sentinel-4l9n.onrender.com"
 WEBCAM_INDEX = 0
 
 print("Loading AI models...")
