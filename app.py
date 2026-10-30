@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import datetime
 
@@ -46,6 +46,20 @@ def control_pump():
 @app.route('/pump', methods=['GET'])
 def get_pump():
     return jsonify({"pump": sensor_data["pump"]})
+
+latest_frame = None
+
+@app.route('/frame', methods=['POST'])
+def upload_frame():
+    global latest_frame
+    latest_frame = request.get.data()
+    return jsonify({"status": "ok"})
+
+@app.route('/frame', methods=["GET"])
+def get_frame():
+    if latest_frame is None:
+        return jsonify({"error": "no frame yet"}), 404
+    return Response(latest_frame, mimetype='image/jpeg')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
