@@ -30,6 +30,16 @@ def send_to_backend(data):
     except:
         print("Backend unreachable — retrying next cycle")
 
+def send_frame(frame):
+    try:
+        small = cv2.resize(frame, (320, 240))
+        ok, buf = cv2.imencode('.jpg', small, [cv2.IMWRITE_JPEG_QUALITY, 50])
+        if ok:
+            requests.post(f"{RENDER_URL}/frame", data=buf.tobytes(),
+                          headers={'Content-Type': 'image/jpeg'}, timeout=5)
+    except Exception:
+        pass
+
 def detect_animal(frame):
     results = yolo_model(frame)
     animals = ['bird','cat','dog','horse','cow','elephant','bear','zebra','giraffe']
@@ -79,6 +89,8 @@ def main():
 
     last_leaf_scan = 0
     last_growth_scan = 0
+    last_frame_sent = 0  # Timer for frame streaming
+    
     LEAF_INTERVAL = 7200
     GROWTH_INTERVAL = 86400
 
@@ -86,6 +98,11 @@ def main():
         ret, frame = cap.read()
         if not ret:
             continue
+
+        # Send resized frame to backend every 2 seconds
+        if time.time() - last_frame_sent > 2:
+            send_frame(frame)
+            last_frame_sent = time.time()
 
         animal, conf = detect_animal(frame)
         if animal:
