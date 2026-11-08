@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AGRI-SENTINEL</title>
+<style>
+  :root { --bg:#0A1628; --bar:#1B2A4A; --card:#1B2A4A; --muted:#9fb0c8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:#fff;
+         font-family:Roboto,"Segoe UI",Arial,sans-serif; }
+  header { background:var(--bar); padding:14px 20px; display:flex;
+           align-items:center; justify-content:space-between; }
+  header h1 { margin:0; font-size:20px; letter-spacing:.5px; }
+  header button { background:none; border:none; color:#fff; font-size:22px; cursor:pointer; }
+  main { max-width:960px; margin:0 auto; padding:16px;
+         display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+  .card { background:var(--card); border:1.5px solid rgba(255,255,255,.25);
+          border-radius:16px; padding:18px; }
+  .label { color:var(--muted); font-size:14px; display:flex; align-items:center; gap:8px; }
+  .big { font-size:48px; font-weight:bold; margin:8px 0 2px; }
+  .title { font-size:20px; font-weight:bold; margin:6px 0 2px; }
+  .sub { font-size:13px; }
+  #error { display:none; text-align:center; padding:40px 16px; }
+  #error button { margin-top:12px; padding:10px 24px; border:none; border-radius:8px;
+                  background:#2196F3; color:#fff; font-size:15px; cursor:pointer; }
+  footer { text-align:center; color:#ffffff55; font-size:12px; padding:20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌿 AGRI-SENTINEL</h1>
+  <button id="refresh" title="Refresh">⟳</button>
+</header>
+
+<div id="error">
+  <div style="font-size:48px">📡</div>
+  <p>Cannot reach server</p>
+  <button id="retry">Retry</button>
+</div>
+
+<main id="content">
+  <div class="card" id="moistureCard">
+    <div class="label">💧 Soil Moisture</div>
+    <div class="big" id="moisture">0</div>
+    <div class="sub" id="moistureStatus"></div>
+  </div>
+
+  <div class="card" id="motionCard">
+    <div class="label">Motion Status</div>
+    <div class="title" id="motion">Field is Clear</div>
+    <div class="sub" id="animal" style="color:orange"></div>
+  </div>
+
+  <div class="card">
+    <div class="label">🍃 Leaf Health</div>
+    <div class="title" id="leafStatus">Scanning...</div>
+    <div class="sub" id="leafDisease" style="color:#26a69a"></div>
+  </div>
+
+  <div class="card">
+    <div class="label">🌱 Growth Stage</div>
+    <div class="title" id="growthStage">Monitoring...</div>
+    <div class="sub" id="harvest" style="color:#66bb6a"></div>
+  </div>
+</main>
+
+<footer id="updated">Last updated: never</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let failures = 0;
+
+function moistureInfo(m) {
+  if (m > 800) return ["#f44336", "DRY — needs water"];
+  if (m > 400) return ["#ff9800", "Getting dry — monitor closely"];
+  return ["#2196F3", "Moisture level is OK"];
+}
+
+function render(d) {
+  const m = Number(d.moisture) || 0;
+  const [color, text] = moistureInfo(m);
+  $("moisture").textContent = m;
+  $("moistureStatus").textContent = text;
+  $("moistureStatus").style.color = color;
+  $("moistureCard").style.borderColor = color;
+
+  const motion = Number(d.motion) === 1;
+  $("motion").textContent = motion ? "ANIMAL DETECTED!" : "Field is Clear";
+  $("motionCard").style.borderColor = motion ? "#f44336" : "#4caf50";
+  $("motionCard").style.background = motion ? "#4A1B1B" : "";
+  const animal = d.animal && d.animal !== "none" ? d.animal : "";
+  $("animal").textContent = animal
+    ? "Species: " + animal + " (" + Math.round((Number(d.confidence) || 0) * 100) + "% confidence)"
+    : "";
+
+  $("leafStatus").textContent = d.leaf_status || "Scanning...";
+  $("leafDisease").textContent = d.leaf_disease || "";
+  $("growthStage").textContent = d.growth_stage || "Monitoring...";
+  $("harvest").textContent = "Days to harvest: " + (d.days_to_harvest ?? "--");
+  $("updated").textContent = "Last updated: " + (d.timestamp || "never");
+}
+
+async function load() {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 60000);   // free tier can take ~50s to wake
+    const r = await fetch("/data", { cache: "no-store", signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) throw new Error("status " + r.status);
+    render(await r.json());
+    failures = 0;
+    $("error").style.display = "none";
+    $("content").style.display = "";
+  } catch (e) {
+    failures++;
+    if (failures >= 2) {
+      $("error").style.display = "block";
+      $("content").style.display = "none";
+    }
+  }
+}
+
+$("refresh").addEventListener("click", load);
+$("retry").addEventListener("click", () => { failures = 0; load(); });
+
+load();
+setInterval(load, 5000);
+</script>
+</body>
+</html>

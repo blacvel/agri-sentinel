@@ -1,6 +1,11 @@
-from flask import Flask, request, jsonify, Response
+    """AGRI-SENTINEL Flask backend."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+
+from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
-from datetime import datetime, timezone, timedelta
 
 app = Flask(__name__)
 CORS(app)
@@ -14,7 +19,7 @@ sensor_data = {
     "growth_stage": "Monitoring...", "days_to_harvest": 0,
     "timestamp": ""
 }
-pump_cmd = {"seq": 0, "command": "NONE"}   # what the farmer asked for
+pump_cmd = {"seq": 0, "command": "NONE"}  # what the farmer asked for
 latest_frame = None
 
 @app.route('/')
@@ -61,6 +66,11 @@ def get_frame():
     return Response(latest_frame, mimetype='image/jpeg',
                     headers={"Cache-Control": "no-store"})
 
+@app.route('/dashboard')
+def dashboard():
+    return send_from_directory('static', 'dashboard.html')
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
-    
+
+        
