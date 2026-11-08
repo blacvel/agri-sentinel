@@ -1,10 +1,10 @@
-    """AGRI-SENTINEL Flask backend."""
+"""AGRI-SENTINEL Flask backend."""
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from flask import Flask, Response, jsonify, request, send_from_directory
+from flask import Flask, request, jsonify, Response, send_from_directory
 from flask_cors import CORS
 
 app = Flask(__name__)
